@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de credenciales del usuario
+model User {
+  id             Int      @id @default(autoincrement()) // Identificador único
+  email          String   @unique // Correo electrónico único
+  password       String   // Contraseña (encriptada)
+  resetToken     String?  // Token para resetear la contraseña, si es necesario
+  resetTokenExp  DateTime? // Expiración del token de reset
+  createdAt      DateTime @default(now()) // Fecha de creación
+  updatedAt      DateTime @updatedAt // Fecha de última actualización
+    isActive  Boolean  @default(true) // 👈 Aquí
+
+  profile        UserProfile? @relation(fields: [userProfileId], references: [id]) // Relación opcional con el perfil del usuario
+  userProfileId  Int?     @unique // Clave foránea que apunta a UserProfile, opcional y única
+  role           UserRole @default(STUDENT) // Rol del usuario, con valor predeterminado 'STUDENT'
+
+}
+
+// Modelo del perfil del usuario (información personal)
+model UserProfile {
+  id             Int       @id @default(autoincrement()) // Identificador único
+  firstName      String    // Primer nombre del usuario
+  lastName       String    // Apellido
+  phoneNumber    String?   // Número de teléfono
+  address        String?   // Dirección del usuario
+  avatarUrl      String?   // URL de la foto de perfil
+  dateOfBirth    DateTime? // Fecha de nacimiento
+  user           User? @relation // Relación con las credenciales de usuario, ahora opcional
+  createdAt      DateTime  @default(now()) // Fecha de creación
+  updatedAt      DateTime  @updatedAt // Fecha de última actualización
+}
+
+// Enum para roles de usuario
+enum UserRole {
+  ADMIN
+  STUDENT
+}
