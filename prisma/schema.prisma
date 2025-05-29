@@ -16,38 +16,138 @@ datasource db {
 }
 
 // Modelo de credenciales del usuario
-model User {
-  id             Int      @id @default(autoincrement()) // Identificador único
-  email          String   @unique // Correo electrónico único
-  password       String   // Contraseña (encriptada)
-  resetToken     String?  // Token para resetear la contraseña, si es necesario
-  resetTokenExp  DateTime? // Expiración del token de reset
-  createdAt      DateTime @default(now()) // Fecha de creación
-  updatedAt      DateTime @updatedAt // Fecha de última actualización
-    isActive  Boolean  @default(true) // 👈 Aquí
 
-  profile        UserProfile? @relation(fields: [userProfileId], references: [id]) // Relación opcional con el perfil del usuario
-  userProfileId  Int?     @unique // Clave foránea que apunta a UserProfile, opcional y única
-  role           UserRole @default(STUDENT) // Rol del usuario, con valor predeterminado 'STUDENT'
+
+model User {
+  id            Int       @id @default(autoincrement()) // Identificador único
+  email         String    @unique // Correo electrónico único
+  password      String // Contraseña (encriptada)
+  resetToken    String? // Token para resetear la contraseña, si es necesario
+  resetTokenExp DateTime? // Expiración del token de reset
+  createdAt     DateTime  @default(now()) // Fecha de creación
+  updatedAt     DateTime  @updatedAt // Fecha de última actualización
+  isActive      Boolean   @default(true) // 👈 Aquí
+
+  profile       UserProfile? @relation(fields: [userProfileId], references: [id]) // Relación opcional con el perfil del usuario
+  userProfileId Int?         @unique // Clave foránea que apunta a UserProfile, opcional y única
+  role          UserRole     @default(STUDENT) // Rol del usuario, con valor predeterminado 'STUDENT'
+  enrollments   Enrollment[] // 👈 Esto es lo que faltaba
+    payments      Payment[]    // 👈 Agregar campo inverso aquí
 
 }
 
 // Modelo del perfil del usuario (información personal)
 model UserProfile {
-  id             Int       @id @default(autoincrement()) // Identificador único
-  firstName      String    // Primer nombre del usuario
-  lastName       String    // Apellido
-  phoneNumber    String?   // Número de teléfono
-  address        String?   // Dirección del usuario
-  avatarUrl      String?   // URL de la foto de perfil
-  dateOfBirth    DateTime? // Fecha de nacimiento
-  user           User? @relation // Relación con las credenciales de usuario, ahora opcional
-  createdAt      DateTime  @default(now()) // Fecha de creación
-  updatedAt      DateTime  @updatedAt // Fecha de última actualización
+  id          Int       @id @default(autoincrement()) // Identificador único
+  firstName   String // Primer nombre del usuario
+  lastName    String // Apellido
+  phoneNumber String? // Número de teléfono
+  address     String? // Dirección del usuario
+  avatarUrl   String? // URL de la foto de perfil
+  dateOfBirth DateTime? // Fecha de nacimiento
+  user        User?     @relation // Relación con las credenciales de usuario, ahora opcional
+  createdAt   DateTime  @default(now()) // Fecha de creación
+  updatedAt   DateTime  @updatedAt // Fecha de última actualización
 }
 
 // Enum para roles de usuario
 enum UserRole {
   ADMIN
   STUDENT
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  imageUrl    String?
+  price       Decimal  @default(0) // Mejor precisión con Decimal para el precio
+  published   Boolean  @default(false)
+  authorName  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  modules     Module[] // Relación uno a muchos con módulos
+  enrollments Enrollment[] // Relación uno a muchos con inscripciones
+  paymentItems PaymentItem[] // relación inversa, muchos items en pagos
+
+}
+
+model Module {
+  id       String @id @default(cuid())
+  title    String
+  order    Int
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+
+  lessons Lesson[] // Relación uno a muchos con lecciones
+}
+
+model Lesson {
+  id       String  @id @default(cuid())
+  title    String
+  content  String?
+  videoUrl String?
+  order    Int
+
+  module   Module @relation(fields: [moduleId], references: [id])
+  moduleId String
+
+  progresses Progress[] // Relación con los progresos de los estudiantes
+}
+
+model Enrollment {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId Int
+
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+  createdAt DateTime @default(now())
+  canceled   Boolean  @default(false) // <-- nuevo
+  progresses Progress[] // Relación con los progresos de las lecciones
+}
+
+model Progress {
+  id           String     @id @default(cuid())
+  lesson       Lesson     @relation(fields: [lessonId], references: [id])
+  lessonId     String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  enrollmentId String
+  completedAt  DateTime   @default(now()) // Fecha de completado de la lección
+
+  @@unique([lessonId, enrollmentId]) // Asegura que un usuario no pueda completar la misma lección más de una vez
+}
+
+
+model Payment {
+  id          String        @id @default(cuid())
+  user        User          @relation(fields: [userId], references: [id])
+  userId      Int
+  amount      Decimal       // total de todos los cursos incluidos
+  currency    String        @default("PEN")
+  status      PaymentStatus @default(PENDING)
+  externalChargeId String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  items       PaymentItem[] // Relación a cada curso pagado
+}
+
+model PaymentItem {
+  id          String   @id @default(cuid())
+  payment     Payment  @relation(fields: [paymentId], references: [id])
+  paymentId   String
+  course      Course   @relation(fields: [courseId], references: [id])
+  courseId    String
+  amount      Decimal  // precio para este curso en particular
+
+  @@unique([paymentId, courseId])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELED
 }

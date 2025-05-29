@@ -14,4 +14,7 @@ export class LoginAuthDto {
   @IsOptional()
   @IsInt({ message: 'El id debe ser un número entero' })
   id?: number; // O si es string, puedes usar @IsString() en vez de @IsInt()
+  @IsOptional()
+  @IsInt({ message: 'El role debe ser un string' })
+  role?: string; // O si es string, puedes usar @IsString() en vez de @IsInt()
 }

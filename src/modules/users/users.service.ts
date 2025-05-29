@@ -53,6 +53,13 @@ export class UsersService {
 
   // Crear usuario
   async create(createUserDto: CreateUserDtoValidation) {
+    const existingUser = await this.prismaService.user.findUnique({
+      where: { email: createUserDto.email },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('El correo ya está en uso');
+    }
     // Encriptar la contraseña
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10); // 10 es el saltRounds
 

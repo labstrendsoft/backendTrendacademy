@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateCredencialesUserDto, UpdateUserDto } from './dto/update-user.dto';
@@ -33,7 +34,7 @@ export class UsersController {
   // Obtener las credenciales del usuario
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.usersService.getUserById(+id);
+    return this.usersService.getUserById(+id); // +id convierte el parámetro a número
   }
 
   // Actualizar las credenciales del usuario (email, password, role)
